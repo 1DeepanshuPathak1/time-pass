@@ -4,6 +4,8 @@ import ItemCard from '../components/ItemCard';
 import SearchFilters from '../components/SearchFilters';
 import { itemsAPI } from '../services/api';
 import socketService from '../services/socket';
+import './css/Home.css';
+import './css/SharedComponents.css';
 
 const Home = () => {
   const [items, setItems] = useState([]);

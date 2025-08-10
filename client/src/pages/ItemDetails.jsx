@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Alert, Image, Badge } from 'react-bootstrap';
 import { itemsAPI } from '../services/api';
+import './css/ItemDetails.css';
+import './css/SharedComponents.css';
 
 const ItemDetails = () => {
   const { id } = useParams();

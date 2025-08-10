@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Alert, Card, Image } from 'react-bootstrap';
 import { itemsAPI } from '../services/api';
+import './css/ReportItem.css';
+import './css/SharedComponents.css';
 
 const ReportItem = () => {
   const [formData, setFormData] = useState({

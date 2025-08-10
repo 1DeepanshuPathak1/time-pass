@@ -1,0 +1,61 @@
+.qr-scanner-container {
+    position: relative;
+}
+
+#qr-reader {
+    border-radius: var(--radius-lg);
+}
+
+#qr-reader video {
+    border-radius: var(--radius-lg) !important;
+}
+
+#qr-reader > div:first-child {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.qr-scanner-instructions {
+    background: var(--gradient-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-inset);
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+
+.qr-scanner-tips {
+    background: linear-gradient(135deg, var(--surface-base), var(--surface-light));
+    border: 2px solid var(--accent-green);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-outset);
+    padding: 1rem;
+}
+
+.instruction-step {
+    background: var(--accent-blue);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.scanned-data-display {
+    background: var(--surface-base);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-inset);
+    border: 2px solid var(--accent-green);
+}
+
+.scanned-data-code {
+    background: var(--surface-darker);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-inset);
+    font-family: monospace;
+    font-size: 0.9rem;
+    word-break: break-all;
+}

@@ -1,0 +1,63 @@
+.report-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.success-card {
+    background: var(--surface-base);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-inset);
+    border: 2px solid var(--accent-green);
+    padding: 2rem;
+}
+
+.unique-id-display {
+    background: var(--surface-darker);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-inset);
+    padding: 0.5rem 1rem;
+    font-family: monospace;
+    display: inline-block;
+    margin-left: 0.5rem;
+}
+
+.qr-code-display {
+    margin-top: 1rem;
+}
+
+.qr-code-display img {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-outset);
+}
+
+.location-status {
+    background: var(--surface-base);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-inset);
+    padding: 1rem;
+}
+
+.location-coordinates {
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.form-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .report-form-container {
+        padding: 1rem;
+    }
+    
+    .success-card {
+        padding: 1.5rem;
+    }
+}

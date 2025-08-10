@@ -1,0 +1,23 @@
+.item-details-image {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-outset);
+}
+
+.qr-code-display h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.qr-code-display img {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-outset);
+}
+
+.item-details .card-body table {
+    color: var(--text-secondary);
+}
+
+.item-details .card-body code {
+    color: var(--accent-blue);
+    font-weight: 500;
+}

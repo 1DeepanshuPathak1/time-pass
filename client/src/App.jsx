@@ -1,11 +1,9 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import ReportItem from './pages/ReportItem';
 import ItemDetails from './pages/ItemDetails';
 import QRScanner from './pages/QRScanner';
-import './App.css';
 
 function App() {
   return (

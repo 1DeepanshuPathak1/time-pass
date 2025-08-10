@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import './css/QRScanner.css';
+import './css/SharedComponents.css';
 
 const QRScanner = () => {
   const navigate = useNavigate();
