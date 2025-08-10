@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const initSqlJs = require('sql.js');
 const multer = require('multer');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
@@ -19,6 +19,30 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 5000;
+let db;
+
+async function initializeDatabase() {
+  const SQL = await initSqlJs();
+  db = new SQL.Database();
+  
+  const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      unique_id TEXT UNIQUE NOT NULL,
+      image_path TEXT,
+      qr_code_path TEXT,
+      lat REAL,
+      lon REAL,
+      status TEXT CHECK(status IN ('lost', 'found', 'claimed')) NOT NULL,
+      category TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  
+  db.run(createTableQuery);
+}
 
 app.use(cors());
 app.use(express.json());
@@ -58,40 +82,9 @@ const upload = multer({
   }
 });
 
-const db = new sqlite3.Database('./lost_found.db', (err) => {
-  if (err) {
-    console.error('Error opening database:', err.message);
-  } else {
-    console.log('Connected to SQLite database.');
-    initializeDatabase();
-  }
+initializeDatabase().then(() => {
+  console.log('Database initialized');
 });
-
-function initializeDatabase() {
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      description TEXT,
-      unique_id TEXT UNIQUE NOT NULL,
-      image_path TEXT,
-      qr_code_path TEXT,
-      lat REAL,
-      lon REAL,
-      status TEXT CHECK(status IN ('lost', 'found', 'claimed')) NOT NULL,
-      category TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
-  
-  db.run(createTableQuery, (err) => {
-    if (err) {
-      console.error('Error creating table:', err.message);
-    } else {
-      console.log('Items table ready.');
-    }
-  });
-}
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -102,14 +95,14 @@ io.on('connection', (socket) => {
 });
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; 
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c; 
+  return R * c;
 }
 
 app.post('/api/items', upload.single('image'), async (req, res) => {
@@ -122,7 +115,6 @@ app.post('/api/items', upload.single('image'), async (req, res) => {
     }
     
     const image_path = req.file ? req.file.filename : null;
-    
     const qr_filename = `qr_${unique_id.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
     const qr_code_path = path.join('qrcodes', qr_filename);
     
@@ -148,25 +140,33 @@ app.post('/api/items', upload.single('image'), async (req, res) => {
     db.run(insertQuery, [
       name, description, unique_id, image_path, qr_filename, 
       parseFloat(lat) || null, parseFloat(lon) || null, status, category
-    ], function(err) {
-      if (err) {
-        console.error('Database error:', err.message);
-        return res.status(500).json({ error: 'Database error: ' + err.message });
-      }
+    ]);
+    
+    const item = db.exec('SELECT * FROM items WHERE id = last_insert_rowid()')[0]?.values[0];
+    
+    if (item) {
+      const itemObj = {
+        id: item[0],
+        name: item[1],
+        description: item[2],
+        unique_id: item[3],
+        image_path: item[4],
+        qr_code_path: item[5],
+        lat: item[6],
+        lon: item[7],
+        status: item[8],
+        category: item[9],
+        created_at: item[10]
+      };
       
-      db.get('SELECT * FROM items WHERE id = ?', [this.lastID], (err, item) => {
-        if (err) {
-          return res.status(500).json({ error: 'Error retrieving created item' });
-        }
-        
-        io.emit('newItem', item);
-        
-        res.status(201).json({
-          message: 'Item created successfully',
-          item: item
-        });
+      io.emit('newItem', itemObj);
+      res.status(201).json({
+        message: 'Item created successfully',
+        item: itemObj
       });
-    });
+    } else {
+      res.status(500).json({ error: 'Error retrieving created item' });
+    }
     
   } catch (error) {
     console.error('Error creating item:', error);
@@ -202,85 +202,118 @@ app.get('/api/items', (req, res) => {
   
   query += ' ORDER BY created_at DESC';
   
-  db.all(query, params, (err, items) => {
-    if (err) {
-      console.error('Database error:', err.message);
-      return res.status(500).json({ error: 'Database error' });
-    }
+  const result = db.exec(query, params);
+  let items = [];
+  
+  if (result.length > 0) {
+    items = result[0].values.map(row => ({
+      id: row[0],
+      name: row[1],
+      description: row[2],
+      unique_id: row[3],
+      image_path: row[4],
+      qr_code_path: row[5],
+      lat: row[6],
+      lon: row[7],
+      status: row[8],
+      category: row[9],
+      created_at: row[10]
+    }));
+  }
+  
+  if (lat && lon && radius) {
+    const userLat = parseFloat(lat);
+    const userLon = parseFloat(lon);
+    const searchRadius = parseFloat(radius);
     
-    if (lat && lon && radius) {
-      const userLat = parseFloat(lat);
-      const userLon = parseFloat(lon);
-      const searchRadius = parseFloat(radius);
-      
-      items = items.filter(item => {
-        if (item.lat && item.lon) {
-          const distance = calculateDistance(userLat, userLon, item.lat, item.lon);
-          return distance <= searchRadius;
-        }
-        return true; 
-      });
-    }
-    
-    res.json(items);
-  });
+    items = items.filter(item => {
+      if (item.lat && item.lon) {
+        const distance = calculateDistance(userLat, userLon, item.lat, item.lon);
+        return distance <= searchRadius;
+      }
+      return true;
+    });
+  }
+  
+  res.json(items);
 });
 
 app.get('/api/items/:id', (req, res) => {
   const { id } = req.params;
+  const result = db.exec('SELECT * FROM items WHERE id = ?', [id]);
   
-  db.get('SELECT * FROM items WHERE id = ?', [id], (err, item) => {
-    if (err) {
-      console.error('Database error:', err.message);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    
+  if (result.length > 0 && result[0].values.length > 0) {
+    const row = result[0].values[0];
+    const item = {
+      id: row[0],
+      name: row[1],
+      description: row[2],
+      unique_id: row[3],
+      image_path: row[4],
+      qr_code_path: row[5],
+      lat: row[6],
+      lon: row[7],
+      status: row[8],
+      category: row[9],
+      created_at: row[10]
+    };
     res.json(item);
-  });
+  } else {
+    res.status(404).json({ error: 'Item not found' });
+  }
 });
 
 app.get('/api/items/by-unique-id/:unique_id', (req, res) => {
   const { unique_id } = req.params;
+  const result = db.exec('SELECT * FROM items WHERE unique_id = ?', [unique_id]);
   
-  db.get('SELECT * FROM items WHERE unique_id = ?', [unique_id], (err, item) => {
-    if (err) {
-      console.error('Database error:', err.message);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    
+  if (result.length > 0 && result[0].values.length > 0) {
+    const row = result[0].values[0];
+    const item = {
+      id: row[0],
+      name: row[1],
+      description: row[2],
+      unique_id: row[3],
+      image_path: row[4],
+      qr_code_path: row[5],
+      lat: row[6],
+      lon: row[7],
+      status: row[8],
+      category: row[9],
+      created_at: row[10]
+    };
     res.json(item);
-  });
+  } else {
+    res.status(404).json({ error: 'Item not found' });
+  }
 });
 
 app.put('/api/items/:id/claim', (req, res) => {
   const { id } = req.params;
+  db.run('UPDATE items SET status = ? WHERE id = ?', ['claimed', id]);
   
-  db.run('UPDATE items SET status = ? WHERE id = ?', ['claimed', id], function(err) {
-    if (err) {
-      console.error('Database error:', err.message);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    
-    db.get('SELECT * FROM items WHERE id = ?', [id], (err, item) => {
-      if (!err && item) {
-        io.emit('itemClaimed', item);
-      }
-    });
-    
+  const result = db.exec('SELECT * FROM items WHERE id = ?', [id]);
+  
+  if (result.length > 0 && result[0].values.length > 0) {
+    const row = result[0].values[0];
+    const item = {
+      id: row[0],
+      name: row[1],
+      description: row[2],
+      unique_id: row[3],
+      image_path: row[4],
+      qr_code_path: row[5],
+      lat: row[6],
+      lon: row[7],
+      status: row[8],
+      category: row[9],
+      created_at: row[10]
+    };
+    io.emit('itemClaimed', item);
     res.json({ message: 'Item marked as claimed' });
-  });
+  } else {
+    res.status(404).json({ error: 'Item not found' });
+  }
 });
 
 app.get('/api/categories', (req, res) => {
@@ -296,7 +329,6 @@ app.get('/api/categories', (req, res) => {
     'Toys',
     'Other'
   ];
-  
   res.json(categories);
 });
 
@@ -327,11 +359,8 @@ server.listen(PORT, () => {
 });
 
 process.on('SIGTERM', () => {
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing database:', err.message);
-    } else {
-      console.log('Database connection closed.');
-    }
-  });
+  if (db) {
+    db.close();
+    console.log('Database connection closed.');
+  }
 });

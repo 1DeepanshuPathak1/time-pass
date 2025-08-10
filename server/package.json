@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js",
-    "postinstall": "npm rebuild"
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +19,7 @@
     "path-to-regexp": "^6.2.1",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7",
+    "sql.js": "^1.13.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
