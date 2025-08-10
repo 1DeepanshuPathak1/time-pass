@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navbar as BootstrapNavbar, Nav, Container } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
+import './css/Navbar.css'; 
 
 const Navbar = () => {
   return (

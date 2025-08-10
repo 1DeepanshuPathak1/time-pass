@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Form, Button, Card } from 'react-bootstrap';
 import { itemsAPI } from '../services/api';
+import './css/SearchFilters.css';
 
 const SearchFilters = ({ onSearch, onReset }) => {
   const [filters, setFilters] = useState({

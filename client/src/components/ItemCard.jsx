@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Badge, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import './css/ItemCard.css'; 
 
 const ItemCard = ({ item }) => {
   const navigate = useNavigate();
