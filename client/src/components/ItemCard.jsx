@@ -73,6 +73,12 @@ const ItemCard = ({ item }) => {
     return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
   };
 
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}/uploads/${imagePath}`;
+  };
+
   return (
     <Card className="item-card h-100">
       <Badge 
@@ -85,9 +91,13 @@ const ItemCard = ({ item }) => {
       {item.image_path ? (
         <Card.Img 
           variant="top" 
-          src={`/uploads/${item.image_path}`}
+          src={getImageUrl(item.image_path)}
           className="item-image"
           alt={item.name}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'flex';
+          }}
         />
       ) : (
         <div className="item-image-placeholder">
@@ -95,6 +105,15 @@ const ItemCard = ({ item }) => {
             {getCategoryIcon(item.category)}
           </div>
           <p className="placeholder-text">No Image</p>
+        </div>
+      )}
+      
+      {item.image_path && (
+        <div className="item-image-placeholder" style={{display: 'none'}}>
+          <div className="placeholder-icon">
+            {getCategoryIcon(item.category)}
+          </div>
+          <p className="placeholder-text">Image not available</p>
         </div>
       )}
       

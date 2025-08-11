@@ -7,22 +7,50 @@ import './css/QRScanner.css';
 const QRScanner = () => {
   const navigate = useNavigate();
   const scannerRef = useRef(null);
+  const scannerContainerRef = useRef(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
   const [scannedData, setScannedData] = useState('');
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear();
-      }
+      cleanupScanner();
     };
   }, []);
+
+  const cleanupScanner = () => {
+    if (scannerRef.current) {
+      try {
+        scannerRef.current.clear().then(() => {
+          scannerRef.current = null;
+          if (scannerContainerRef.current) {
+            scannerContainerRef.current.innerHTML = '';
+          }
+        }).catch(err => {
+          console.error('Error clearing scanner:', err);
+          scannerRef.current = null;
+          if (scannerContainerRef.current) {
+            scannerContainerRef.current.innerHTML = '';
+          }
+        });
+      } catch (err) {
+        console.error('Error during cleanup:', err);
+        scannerRef.current = null;
+        if (scannerContainerRef.current) {
+          scannerContainerRef.current.innerHTML = '';
+        }
+      }
+    }
+  };
 
   const startScanning = () => {
     setIsScanning(true);
     setError('');
     setScannedData('');
+
+    if (scannerContainerRef.current) {
+      scannerContainerRef.current.innerHTML = '';
+    }
 
     const scanner = new Html5QrcodeScanner(
       "qr-reader",
@@ -38,7 +66,7 @@ const QRScanner = () => {
 
     scanner.render(
       (decodedText) => {
-        scanner.clear();
+        cleanupScanner();
         setIsScanning(false);
         handleScanSuccess(decodedText);
       },
@@ -49,10 +77,8 @@ const QRScanner = () => {
   };
 
   const stopScanning = () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear();
-      setIsScanning(false);
-    }
+    cleanupScanner();
+    setIsScanning(false);
   };
 
   const handleScanSuccess = (decodedText) => {
@@ -98,7 +124,7 @@ const QRScanner = () => {
           )}
           
           <div className="scanner-main">
-            <div className="scanner-viewport" id="qr-reader">
+            <div className="scanner-viewport" id="qr-reader" ref={scannerContainerRef}>
               {!isScanning && (
                 <div className="scanner-placeholder">
                   <div className="placeholder-icon">📱</div>

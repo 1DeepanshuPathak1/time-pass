@@ -85,6 +85,18 @@ const ItemDetails = () => {
     return `https://www.google.com/maps?q=${lat},${lon}`;
   };
 
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}/uploads/${imagePath}`;
+  };
+
+  const getQRCodeUrl = (qrCodePath) => {
+    if (!qrCodePath) return null;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}/qrcodes/${qrCodePath}`;
+  };
+
   if (loading) {
     return (
       <div className="item-details-page">
@@ -176,11 +188,19 @@ const ItemDetails = () => {
                   {item.image_path ? (
                     <div className="item-image-container">
                       <Image 
-                        src={`/uploads/${item.image_path}`}
+                        src={getImageUrl(item.image_path)}
                         alt={item.name}
                         className="item-image"
                         fluid
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
+                      <div className="no-image-placeholder" style={{display: 'none'}}>
+                        <div className="placeholder-icon">📦</div>
+                        <p className="placeholder-text">Image not available</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="no-image-placeholder">
@@ -199,10 +219,15 @@ const ItemDetails = () => {
                       </h5>
                       <div className="qr-code-container">
                         <Image 
-                          src={`/qrcodes/${item.qr_code_path}`}
+                          src={getQRCodeUrl(item.qr_code_path)}
                           alt="QR Code"
                           className="qr-code-image"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
                         />
+                        <p style={{display: 'none'}}>QR code not available</p>
                       </div>
                       <p className="qr-code-description">Scan this code to quickly access this item</p>
                     </div>

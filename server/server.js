@@ -116,7 +116,7 @@ app.post('/api/items', upload.single('image'), async (req, res) => {
     
     const image_path = req.file ? req.file.filename : null;
     const qr_filename = `qr_${unique_id.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-    const qr_code_path = path.join('qrcodes', qr_filename);
+    const qr_code_path = path.join(__dirname, 'qrcodes', qr_filename);
     
     const baseUrl = process.env.NODE_ENV === 'production' 
       ? process.env.BASE_URL || 'https://your-app.onrender.com'
