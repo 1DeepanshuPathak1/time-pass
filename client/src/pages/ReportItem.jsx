@@ -142,6 +142,12 @@ const ReportItem = () => {
     }
   };
 
+  const getQRCodeUrl = (qrCodePath) => {
+    if (!qrCodePath) return null;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}/qrcodes/${qrCodePath}`;
+  };
+
   return (
     <div className="report-item-page">
       <Container>
@@ -194,10 +200,18 @@ const ReportItem = () => {
                     <h5 className="qr-title">QR Code Generated:</h5>
                     <div className="qr-code-container">
                       <Image 
-                        src={`/qrcodes/${createdItem.qr_code_path}`}
+                        src={getQRCodeUrl(createdItem.qr_code_path)}
                         alt="QR Code"
                         className="qr-code-image"
+                        onError={(e) => {
+                          console.error('QR code image failed to load:', e);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
                       />
+                      <div style={{display: 'none', padding: '20px', textAlign: 'center'}}>
+                        <p>QR code not available</p>
+                      </div>
                     </div>
                     <p className="qr-description">
                       Share this QR code to help others identify your item

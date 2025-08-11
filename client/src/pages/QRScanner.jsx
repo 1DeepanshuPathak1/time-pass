@@ -11,6 +11,7 @@ const QRScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
   const [scannedData, setScannedData] = useState('');
+  const [scannerInitialized, setScannerInitialized] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -18,66 +19,85 @@ const QRScanner = () => {
     };
   }, []);
 
-  const cleanupScanner = () => {
-    if (scannerRef.current) {
+  const cleanupScanner = async () => {
+    if (scannerRef.current && scannerInitialized) {
       try {
-        scannerRef.current.clear().then(() => {
-          scannerRef.current = null;
-          if (scannerContainerRef.current) {
-            scannerContainerRef.current.innerHTML = '';
-          }
-        }).catch(err => {
-          console.error('Error clearing scanner:', err);
-          scannerRef.current = null;
-          if (scannerContainerRef.current) {
-            scannerContainerRef.current.innerHTML = '';
-          }
-        });
+        await scannerRef.current.clear();
+        setScannerInitialized(false);
       } catch (err) {
-        console.error('Error during cleanup:', err);
+        console.warn('Scanner cleanup warning:', err);
+      } finally {
         scannerRef.current = null;
         if (scannerContainerRef.current) {
-          scannerContainerRef.current.innerHTML = '';
+          // Clear the container content safely
+          const container = scannerContainerRef.current;
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
         }
       }
     }
   };
 
-  const startScanning = () => {
+  const startScanning = async () => {
+    if (isScanning || scannerInitialized) return;
+
     setIsScanning(true);
     setError('');
     setScannedData('');
 
+    // Clear any existing content
     if (scannerContainerRef.current) {
-      scannerContainerRef.current.innerHTML = '';
+      const container = scannerContainerRef.current;
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
     }
 
-    const scanner = new Html5QrcodeScanner(
-      "qr-reader",
-      { 
-        fps: 10, 
-        qrbox: { width: 300, height: 300 },
-        rememberLastUsedCamera: true
-      },
-      false
-    );
+    try {
+      const scanner = new Html5QrcodeScanner(
+        "qr-reader",
+        { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          rememberLastUsedCamera: true,
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: true,
+          defaultZoomValueIfSupported: 2,
+        },
+        false
+      );
 
-    scannerRef.current = scanner;
+      scannerRef.current = scanner;
 
-    scanner.render(
-      (decodedText) => {
-        cleanupScanner();
-        setIsScanning(false);
-        handleScanSuccess(decodedText);
-      },
-      (error) => {
-        console.log('Scan error:', error);
-      }
-    );
+      scanner.render(
+        async (decodedText) => {
+          setScannerInitialized(true);
+          await cleanupScanner();
+          setIsScanning(false);
+          handleScanSuccess(decodedText);
+        },
+        (error) => {
+          // Ignore scan errors as they happen frequently during scanning
+          if (error.includes('NotFoundException')) {
+            // This is normal - QR code not found in frame
+            return;
+          }
+          console.log('Scan error:', error);
+        }
+      );
+
+      setScannerInitialized(true);
+    } catch (err) {
+      console.error('Failed to start scanner:', err);
+      setError('Failed to start camera scanner. Please check camera permissions.');
+      setIsScanning(false);
+      setScannerInitialized(false);
+    }
   };
 
-  const stopScanning = () => {
-    cleanupScanner();
+  const stopScanning = async () => {
+    await cleanupScanner();
     setIsScanning(false);
   };
 
@@ -86,6 +106,7 @@ const QRScanner = () => {
     
     let uniqueId = decodedText;
     
+    // Parse QR code data if it contains pipe separator
     if (decodedText.includes('|')) {
       const parts = decodedText.split('|');
       uniqueId = parts[0];
@@ -124,17 +145,19 @@ const QRScanner = () => {
           )}
           
           <div className="scanner-main">
-            <div className="scanner-viewport" id="qr-reader" ref={scannerContainerRef}>
-              {!isScanning && (
-                <div className="scanner-placeholder">
-                  <div className="placeholder-icon">📱</div>
-                  <p className="placeholder-text">Camera preview will appear here</p>
-                </div>
-              )}
+            <div className="scanner-viewport">
+              <div id="qr-reader" ref={scannerContainerRef}>
+                {!isScanning && !scannerInitialized && (
+                  <div className="scanner-placeholder">
+                    <div className="placeholder-icon">📱</div>
+                    <p className="placeholder-text">Camera preview will appear here</p>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="scanner-controls">
-              {!isScanning ? (
+              {!isScanning && !scannerInitialized ? (
                 <Button 
                   variant="primary" 
                   size="lg"
@@ -153,6 +176,7 @@ const QRScanner = () => {
                   size="lg"
                   onClick={stopScanning}
                   className="control-button stop-button"
+                  disabled={!isScanning && !scannerInitialized}
                 >
                   <svg width="20" height="20" fill="currentColor" className="button-icon">
                     <path d="M5.5 3.5A1.5 1.5 0 0 1 7 2h2a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 9 6H7a1.5 1.5 0 0 1-1.5-1.5v-1zM7 3a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-1A.5.5 0 0 0 9 3H7z"/>
@@ -215,7 +239,7 @@ const QRScanner = () => {
               <strong>Pro Tips:</strong>
             </div>
             <p className="tips-text">
-              Ensure good lighting • Hold your device steady • Position QR code within the scanning area
+              Ensure good lighting • Hold your device steady • Position QR code within the scanning area • Grant camera permissions when prompted
             </p>
           </div>
         </div>

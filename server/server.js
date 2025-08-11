@@ -13,12 +13,15 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' ? false : "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: process.env.NODE_ENV === 'production' ? 
+      ["https://lost-n-found-eta.vercel.app"] : 
+      ["http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 let db;
 
 async function initializeDatabase() {
@@ -44,7 +47,18 @@ async function initializeDatabase() {
   db.run(createTableQuery);
 }
 
-app.use(cors());
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' ? 
+    ["https://lost-n-found-eta.vercel.app"] : 
+    ["http://localhost:5173"],
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -119,8 +133,7 @@ app.post('/api/items', upload.single('image'), async (req, res) => {
     const qr_code_path = path.join(__dirname, 'qrcodes', qr_filename);
     
     const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.BASE_URL || 'https://your-app.onrender.com'
-      : 'http://localhost:3000';
+      ? process.env.BASE_URL: `http://localhost:${PORT}`;
     
     const qrData = `${unique_id}|${baseUrl}/item/${unique_id}`;
     
