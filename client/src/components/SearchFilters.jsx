@@ -18,6 +18,7 @@ const SearchFilters = ({ onSearch, onReset }) => {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
 
   useEffect(() => {
     loadCategories();
@@ -25,10 +26,28 @@ const SearchFilters = ({ onSearch, onReset }) => {
 
   const loadCategories = async () => {
     try {
+      setCategoryError('');
       const response = await itemsAPI.getCategories();
-      setCategories(response.data);
+      if (response && response.data) {
+        setCategories(response.data);
+      } else {
+        setCategories([]);
+      }
     } catch (error) {
       console.error('Error loading categories:', error);
+      setCategoryError('Failed to load categories');
+      setCategories([
+        'Electronics',
+        'Clothing',
+        'Documents',
+        'Jewelry',
+        'Books',
+        'Keys',
+        'Bags',
+        'Sports Equipment',
+        'Toys',
+        'Other'
+      ]);
     }
   };
 
@@ -162,6 +181,9 @@ const SearchFilters = ({ onSearch, onReset }) => {
                     </option>
                   ))}
                 </select>
+                {categoryError && (
+                  <small className="text-warning">{categoryError}</small>
+                )}
               </div>
 
               <div className="filter-item">

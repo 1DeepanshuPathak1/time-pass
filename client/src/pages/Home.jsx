@@ -12,29 +12,45 @@ const Home = () => {
   const [error, setError] = useState('');
   const [searchApplied, setSearchApplied] = useState(false);
   const [stats, setStats] = useState({ total: 0, lost: 0, found: 0, claimed: 0 });
+  const [socketConnected, setSocketConnected] = useState(false);
 
   useEffect(() => {
     loadItems();
-    
-    const socket = socketService.connect();
-    
-    socket.on('newItem', (newItem) => {
-      setItems(prevItems => [newItem, ...prevItems]);
-      updateStats(prevItems => [...prevItems, newItem]);
-    });
-    
-    socket.on('itemClaimed', (updatedItem) => {
-      setItems(prevItems => 
-        prevItems.map(item => 
-          item.id === updatedItem.id ? updatedItem : item
-        )
-      );
-    });
+    setupSocket();
     
     return () => {
       socketService.disconnect();
     };
   }, []);
+
+  const setupSocket = () => {
+    try {
+      const socket = socketService.connect();
+      
+      socket.on('connect', () => {
+        setSocketConnected(true);
+      });
+      
+      socket.on('disconnect', () => {
+        setSocketConnected(false);
+      });
+      
+      socket.on('newItem', (newItem) => {
+        setItems(prevItems => [newItem, ...prevItems]);
+        updateStats(prevItems => [newItem, ...prevItems]);
+      });
+      
+      socket.on('itemClaimed', (updatedItem) => {
+        setItems(prevItems => 
+          prevItems.map(item => 
+            item.id === updatedItem.id ? updatedItem : item
+          )
+        );
+      });
+    } catch (error) {
+      console.error('Socket setup error:', error);
+    }
+  };
 
   const updateStats = (itemsList) => {
     const total = itemsList.length;
@@ -49,11 +65,19 @@ const Home = () => {
       setLoading(true);
       setError('');
       const response = await itemsAPI.getItems(filters);
-      setItems(response.data);
-      updateStats(response.data);
+      
+      if (response && response.data) {
+        setItems(response.data);
+        updateStats(response.data);
+      } else {
+        setItems([]);
+        updateStats([]);
+      }
     } catch (error) {
       console.error('Error loading items:', error);
-      setError('Failed to load items. Please try again.');
+      setError('Failed to load items. Please check your connection and try again.');
+      setItems([]);
+      updateStats([]);
     } finally {
       setLoading(false);
     }
@@ -103,6 +127,14 @@ const Home = () => {
                     <div className="stat-label">Reunited</div>
                   </div>
                 </div>
+                
+                {!socketConnected && (
+                  <div className="connection-status">
+                    <small className="text-muted">
+                      ⚠️ Real-time updates unavailable
+                    </small>
+                  </div>
+                )}
               </div>
             </Col>
           </Row>
@@ -129,6 +161,14 @@ const Home = () => {
                 </svg>
                 <span className="alert-text">{error}</span>
               </div>
+              <Button 
+                variant="outline-danger" 
+                size="sm" 
+                className="retry-button"
+                onClick={() => loadItems()}
+              >
+                Retry
+              </Button>
             </Alert>
           )}
           
